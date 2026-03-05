@@ -1,6 +1,7 @@
 import express, { Request, Response } from "express";
 import cors from "cors";
 import morgan from "morgan";
+import authRoutes from "./routes/auth.routes";
 
 const app = express();
 
@@ -14,6 +15,9 @@ app.use(express.urlencoded({ extended: true }));
 app.get("/", (req: Request, res: Response) => {
   res.json({ message: "Welcome to the AI Caption Generator API" });
 });
+
+// Auth routes
+app.use("/api/auth", authRoutes);
 
 
 export default app;
