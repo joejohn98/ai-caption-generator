@@ -1,10 +1,10 @@
-import mongoose from "mongoose";
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 
 import User from "../models/user.model";
 import { loginSchema, registerSchema } from "../validators/auth.validators";
 import generateToken from "../utils/generateToken";
+import { config } from "../config/config";
 
 const registerUser = async (req: Request, res: Response): Promise<void> => {
   const { username, email, password } = req.body;
@@ -92,7 +92,7 @@ const loginUser = async (req: Request, res: Response): Promise<void> => {
       status: "success",
       message: "User logged in successfully",
       data: existingUser,
-      token
+      token,
     });
   } catch (error) {
     console.log("error to login the user", error);
@@ -103,4 +103,24 @@ const loginUser = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-export { registerUser, loginUser };
+const logoutUser = async (req: Request, res: Response): Promise<void> => {
+  try {
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: config.nodeEnv === "production",
+      sameSite: config.nodeEnv === "production" ? "none" : "lax",
+    });
+    res.status(200).json({
+      status: "success",
+      message: "User logged out successfully",
+    });
+  } catch (error) {
+    console.log("error to logout the user", error);
+    res.status(500).json({
+      status: "failed",
+      error: "Internal server error, failed to logout user",
+    });
+  }
+};
+
+export { registerUser, loginUser, logoutUser };
