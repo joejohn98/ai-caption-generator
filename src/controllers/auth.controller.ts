@@ -3,10 +3,8 @@ import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 
 import User from "../models/user.model";
-import {
-  loginSchema,
-  registerSchema,
-} from "../utils/validators/auth.validators";
+import { loginSchema, registerSchema } from "../validators/auth.validators";
+import generateToken from "../utils/generateToken";
 
 const registerUser = async (req: Request, res: Response): Promise<void> => {
   const { username, email, password } = req.body;
@@ -33,9 +31,14 @@ const registerUser = async (req: Request, res: Response): Promise<void> => {
 
   try {
     const newUser = await User.create({ username, email, password });
+
+    // Generate and set JWT token
+    const token = generateToken(newUser._id.toString(), res);
+
     res.status(201).json({
       status: "success",
       data: newUser,
+      token,
     });
   } catch (error) {
     console.log("error to register the user", error);
@@ -59,7 +62,7 @@ const loginUser = async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
-  const existingUser = await User.findOne({ email });
+  const existingUser = await User.findOne({ email }).select("+password");
 
   if (!existingUser) {
     res.status(400).json({
@@ -74,6 +77,7 @@ const loginUser = async (req: Request, res: Response): Promise<void> => {
       password,
       existingUser.password,
     );
+
     if (!isPasswordValid) {
       res.status(401).json({
         status: "failed",
@@ -81,10 +85,14 @@ const loginUser = async (req: Request, res: Response): Promise<void> => {
       });
       return;
     }
+    // Generate and set JWT token
+    const token = generateToken(existingUser._id.toString(), res);
+
     res.status(200).json({
       status: "success",
       message: "User logged in successfully",
       data: existingUser,
+      token
     });
   } catch (error) {
     console.log("error to login the user", error);
