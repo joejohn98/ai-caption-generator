@@ -62,7 +62,7 @@ const protect = async (
     console.log("error to protect the route", error);
     res.status(500).json({
       status: "failed",
-      error: "Internal server error, failed to protect route",
+      error: "Unauthorized, invalid token",
     });
   }
 };
