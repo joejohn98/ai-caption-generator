@@ -30,10 +30,12 @@ const registerUser = async (req: Request, res: Response): Promise<void> => {
   }
 
   try {
-    const newUser = await User.create({ username, email, password });
+    const newUser = new User({ username, email, password });
 
-    // Generate and set JWT token
+    // Generate and set JWT token before saving to database
     const token = generateToken(newUser._id.toString(), res);
+
+    await newUser.save();
 
     res.status(201).json({
       status: "success",
@@ -88,10 +90,13 @@ const loginUser = async (req: Request, res: Response): Promise<void> => {
     // Generate and set JWT token
     const token = generateToken(existingUser._id.toString(), res);
 
+    // Remove password from the response
+    const { password: _, ...userResponse } = existingUser.toObject();
+
     res.status(200).json({
       status: "success",
       message: "User logged in successfully",
-      data: existingUser,
+      data: userResponse,
       token,
     });
   } catch (error) {
