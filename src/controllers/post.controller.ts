@@ -1,6 +1,15 @@
 import { Request, Response } from "express";
 
 const createPost = async (req: Request, res: Response): Promise<void> => {
+  const file = req.file;
+
+  if (!file) {
+    res.status(400).json({
+      status: "failed",
+      error: "Image is required",
+    });
+    return;
+  }
   try {
     res.status(201).json({
       status: "success",
