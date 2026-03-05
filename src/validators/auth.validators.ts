@@ -33,7 +33,7 @@ const loginSchema = z.object({
     .min(5, "Email must be at least 5 characters long")
     .toLowerCase(),
   password: z
-    .string()
+    .string("Password is required")
     .min(8, "Password must be at least 8 characters long")
     .max(20, "Password must be at most 20 characters long"),
 });
