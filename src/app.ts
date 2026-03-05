@@ -2,7 +2,9 @@ import express, { Request, Response } from "express";
 import cors from "cors";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
+
 import authRoutes from "./routes/auth.routes";
+import postRoutes from "./routes/post.routes";
 
 const app = express();
 
@@ -25,5 +27,8 @@ app.get("/", (req: Request, res: Response) => {
 
 // Auth routes
 app.use("/api/auth", authRoutes);
+
+// Post routes
+app.use("/api/posts", postRoutes);
 
 export default app;
