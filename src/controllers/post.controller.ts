@@ -6,6 +6,7 @@ import generateCaption from "../services/ai.service";
 import { uploadImage } from "../services/storage.service";
 import Post from "../models/post.model";
 import mongoose from "mongoose";
+import { createPostSchema } from "../validators/post.validators";
 
 const createPost = async (req: Request, res: Response): Promise<void> => {
   const userId = req.user._id;
@@ -43,6 +44,20 @@ const createPost = async (req: Request, res: Response): Promise<void> => {
     }
     if (!caption) {
       throw new Error("Caption generation failed: no caption returned");
+    }
+
+    const validate = createPostSchema.safeParse({
+      image: uploadResult.url,
+      caption: caption,
+      user: userId,
+    });
+
+    if (!validate.success) {
+      res.status(400).json({
+        status: "failed",
+        error: validate.error?.issues[0]?.message || "Invalid post data",
+      });
+      return;
     }
 
     const post = await Post.create({
