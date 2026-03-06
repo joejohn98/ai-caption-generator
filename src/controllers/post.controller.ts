@@ -11,11 +11,15 @@ import {
   updatePostSchema,
 } from "../validators/post.validators";
 
+const isValidObjectId = (id: string): boolean => {
+  return mongoose.Types.ObjectId.isValid(id);
+};
+
 const createPost = async (req: Request, res: Response): Promise<void> => {
   const userId = req.user._id;
   const file = req.file;
 
-  if (!mongoose.Types.ObjectId.isValid(userId)) {
+  if (!isValidObjectId(userId)) {
     res.status(400).json({
       status: "failed",
       error: "Invalid user ID",
@@ -88,12 +92,12 @@ const updatePost = async (req: Request, res: Response): Promise<void> => {
   const file = req.file;
   const { postId } = req.params as { postId: string };
 
-  if (!mongoose.Types.ObjectId.isValid(userId)) {
+  if (!isValidObjectId(userId)) {
     res.status(400).json({ status: "failed", error: "Invalid user ID" });
     return;
   }
 
-  if (!postId || !mongoose.Types.ObjectId.isValid(postId)) {
+  if (!postId || !isValidObjectId(postId)) {
     res.status(400).json({ status: "failed", error: "Invalid post ID" });
     return;
   }
@@ -169,4 +173,51 @@ const updatePost = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-export { createPost, updatePost };
+const deletePost = async (req: Request, res: Response): Promise<void> => {
+  const userId = req.user._id;
+  const { postId } = req.params as { postId: string };
+
+  if (!isValidObjectId(userId)) {
+    res.status(400).json({ status: "failed", error: "Invalid user ID" });
+    return;
+  }
+
+  if (!postId || !isValidObjectId(postId)) {
+    res.status(400).json({ status: "failed", error: "Invalid post ID" });
+    return;
+  }
+
+  try {
+    // Check the post exists and belongs to this user
+    const existingPost = await Post.findById(postId);
+
+    if (!existingPost) {
+      res.status(404).json({ status: "failed", error: "Post not found" });
+      return;
+    }
+
+    if (existingPost.user.toString() !== userId.toString()) {
+      res.status(403).json({
+        status: "failed",
+        error: "Forbidden: you do not own this post",
+      });
+      return;
+    }
+
+    const post = await Post.findByIdAndDelete(postId);
+
+    res.status(200).json({
+      status: "success",
+      message: "Post deleted successfully",
+      post,
+    });
+  } catch (error) {
+    console.log("error deleting post", error);
+    res.status(500).json({
+      status: "failed",
+      error: "Internal server error, failed to delete post",
+    });
+  }
+};
+
+export { createPost, updatePost, deletePost };
