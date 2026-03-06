@@ -8,4 +8,5 @@ export const config = {
   nodeEnv: process.env.NODE_ENV || "development",
   jwtSecret: process.env.JWT_SECRET,
   jwtExpiration: process.env.JWT_EXPIRATION || "7d",
+  imagekitPrivateKey: process.env.IMAGEKIT_PRIVATE_KEY,
 };
