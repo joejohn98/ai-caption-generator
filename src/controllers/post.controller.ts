@@ -15,6 +15,35 @@ const isValidObjectId = (id: string): boolean => {
   return mongoose.Types.ObjectId.isValid(id);
 };
 
+const getPosts = async (req: Request, res: Response): Promise<void> => {
+  const userId = req.user._id;
+
+  if (!isValidObjectId(userId)) {
+    res.status(400).json({
+      status: "failed",
+      error: "Invalid user ID",
+    });
+    return;
+  }
+
+  try {
+    const posts = await Post.find({ user: userId })
+      .populate("user", "username email")
+      .select("-__v");
+    res.status(200).json({
+      status: "success",
+      message: "Posts fetched successfully",
+      posts,
+    });
+  } catch (error) {
+    console.log("error fetching posts", error);
+    res.status(500).json({
+      status: "failed",
+      error: "Internal server error, failed to fetch posts",
+    });
+  }
+};
+
 const createPost = async (req: Request, res: Response): Promise<void> => {
   const userId = req.user._id;
   const file = req.file;
@@ -220,4 +249,4 @@ const deletePost = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-export { createPost, updatePost, deletePost };
+export { createPost, updatePost, deletePost, getPosts };

@@ -4,6 +4,7 @@ import multer from "multer";
 import {
   createPost,
   deletePost,
+  getPosts,
   updatePost,
 } from "../controllers/post.controller";
 import protect from "../middlewares/protect.middleware";
@@ -11,6 +12,8 @@ import protect from "../middlewares/protect.middleware";
 const upload = multer({ storage: multer.memoryStorage() });
 
 const router = Router();
+
+router.get("/", protect, getPosts);
 
 router.post("/", protect, upload.single("image"), createPost);
 
