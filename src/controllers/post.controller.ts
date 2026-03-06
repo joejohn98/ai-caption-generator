@@ -6,7 +6,10 @@ import generateCaption from "../services/ai.service";
 import { uploadImage } from "../services/storage.service";
 import Post from "../models/post.model";
 import mongoose from "mongoose";
-import { createPostSchema } from "../validators/post.validators";
+import {
+  createPostSchema,
+  updatePostSchema,
+} from "../validators/post.validators";
 
 const createPost = async (req: Request, res: Response): Promise<void> => {
   const userId = req.user._id;
@@ -80,4 +83,90 @@ const createPost = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-export { createPost };
+const updatePost = async (req: Request, res: Response): Promise<void> => {
+  const userId = req.user._id;
+  const file = req.file;
+  const { postId } = req.params as { postId: string };
+
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    res.status(400).json({ status: "failed", error: "Invalid user ID" });
+    return;
+  }
+
+  if (!postId || !mongoose.Types.ObjectId.isValid(postId)) {
+    res.status(400).json({ status: "failed", error: "Invalid post ID" });
+    return;
+  }
+
+  try {
+    // Check the post exists and belongs to this user
+    const existingPost = await Post.findById(postId);
+
+    if (!existingPost) {
+      res.status(404).json({ status: "failed", error: "Post not found" });
+      return;
+    }
+
+    if (existingPost.user.toString() !== userId.toString()) {
+      res.status(403).json({
+        status: "failed",
+        error: "Forbidden: you do not own this post",
+      });
+      return;
+    }
+
+    const updateData: { image?: string; caption?: string } = {};
+
+    // Case 1: New image uploaded → upload to ImageKit + regenerate caption via AI
+    if (file) {
+      const base64Image = file.buffer.toString("base64");
+      const fileName = `${uuidv4()}${path.extname(file.originalname)}`;
+
+      const [caption, uploadResult] = await Promise.all([
+        generateCaption(base64Image),
+        uploadImage(file, fileName),
+      ]);
+
+      if (!uploadResult.url)
+        throw new Error("Image upload failed: no URL returned");
+      if (!caption)
+        throw new Error("Caption generation failed: no caption returned");
+
+      updateData.image = uploadResult.url;
+      updateData.caption = caption; // AI-generated caption for new image
+    } else if (req.body.caption) {
+      // Case 2: No new image, but user wants to manually update the caption
+      updateData.caption = req.body.caption;
+    }
+
+    const validate = updatePostSchema.safeParse(updateData);
+
+    if (!validate.success) {
+      res.status(400).json({
+        status: "failed",
+        error: validate.error?.issues[0]?.message || "Invalid post data",
+      });
+      return;
+    }
+
+    const post = await Post.findByIdAndUpdate(
+      postId,
+      { $set: updateData },
+      { new: true }, // returns the updated document
+    );
+
+    res.status(200).json({
+      status: "success",
+      message: "Post updated successfully",
+      post,
+    });
+  } catch (error) {
+    console.log("error updating post", error);
+    res.status(500).json({
+      status: "failed",
+      error: "Internal server error, failed to update post",
+    });
+  }
+};
+
+export { createPost, updatePost };
