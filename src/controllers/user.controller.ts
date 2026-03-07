@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import User from "../models/user.model";
 import Post from "../models/post.model";
 import { updateUserSchema } from "../validators/user.validators";
+import { config } from "../config/config";
 
 const isValidObjectId = (id: string): boolean => {
   return mongoose.Types.ObjectId.isValid(id);
@@ -133,7 +134,11 @@ const deleteMe = async (req: Request, res: Response): Promise<void> => {
     await Post.deleteMany({ user: userId });
 
     // Clear the auth cookie
-    res.clearCookie("token");
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: config.nodeEnv === "production",
+      sameSite: config.nodeEnv === "production" ? "none" : "lax",
+    });
 
     res.status(200).json({
       status: "success",
