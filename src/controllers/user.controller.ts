@@ -96,7 +96,36 @@ const updateMe = async (req: Request, res: Response): Promise<void> => {
 };
 
 const deleteMe = async (req: Request, res: Response): Promise<void> => {
-  res.json({ message: "User deleted" });
+  const userId = req.user._id;
+
+  if (!isValidObjectId(userId)) {
+    res.status(400).json({
+      status: "failed",
+      error: "Invalid user ID",
+    });
+    return;
+  }
+
+  try {
+    const user = await User.findByIdAndDelete(userId);
+    if (!user) {
+      res.status(404).json({
+        status: "failed",
+        error: "User not found",
+      });
+      return;
+    }
+    res.status(200).json({
+      status: "success",
+      message: "User deleted successfully",
+    });
+  } catch (error) {
+    console.log("error deleting user", error);
+    res.status(500).json({
+      status: "failed",
+      error: "Internal server error, failed to delete user",
+    });
+  }
 };
 
 export { getMe, updateMe, deleteMe };
