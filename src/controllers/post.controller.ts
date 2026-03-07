@@ -33,6 +33,7 @@ const getPosts = async (req: Request, res: Response): Promise<void> => {
     res.status(200).json({
       status: "success",
       message: "Posts fetched successfully",
+      results: posts.length,
       posts,
     });
   } catch (error) {
