@@ -103,13 +103,24 @@ const createPost = async (req: Request, res: Response): Promise<void> => {
       user: userId,
     });
 
+    const { __v, ...postWithoutV } = post.toObject();
+
     res.status(201).json({
       status: "success",
       message: "Post created successfully",
-      post,
+      post: postWithoutV,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.log("error creating post", error);
+
+    if (error?.status === 429 || error?.code === 429) {
+      res.status(429).json({
+        status: "failed",
+        error: "AI caption service rate limit reached. Please try again later.",
+      });
+      return;
+    }
+
     res.status(500).json({
       status: "failed",
       error: "Internal server error, failed to create post",
@@ -194,8 +205,17 @@ const updatePost = async (req: Request, res: Response): Promise<void> => {
       message: "Post updated successfully",
       post,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.log("error updating post", error);
+
+    if (error?.status === 429 || error?.code === 429) {
+      res.status(429).json({
+        status: "failed",
+        error: "AI caption service rate limit reached. Please try again later.",
+      });
+      return;
+    }
+
     res.status(500).json({
       status: "failed",
       error: "Internal server error, failed to update post",
