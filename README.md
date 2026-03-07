@@ -1,17 +1,19 @@
 # AI Caption Generator API
 
-A RESTful API built with **Express 5** and **TypeScript** that automatically generates captions for uploaded images using **Google Gemini AI**. Users upload an image, the AI generates a relevant caption, and the image is stored on **ImageKit** cloud storage.
+A RESTful API built with **Express 5** and **TypeScript** that automatically generates captions for uploaded images using **Google Gemini AI**. Users upload an image, the AI generates a relevant caption with hashtags and emojis, and the image is stored on **ImageKit** cloud storage.
 
 ## Features
 
 - **AI-powered caption generation** — Uses Google Gemini to generate short, relevant captions with hashtags and emojis
-- **Cloud image storage** — Images are uploaded to ImageKit with UUID-based filenames
-- **Authentication** — JWT-based auth with both cookie and Bearer token support
-- **User management** — Register, login, logout, profile management, and account deletion
+- **Cloud image storage** — Images uploaded to ImageKit with UUID-based filenames
+- **JWT authentication** — Dual support for Bearer token and httpOnly cookie
+- **User management** — Register, login, logout, profile updates, and account deletion (cascades to posts)
 - **Post CRUD** — Create, read, update, and delete posts with ownership protection
+- **Swagger API docs** — Interactive OpenAPI documentation at `/api-docs`
 - **Input validation** — All inputs validated with Zod schemas
 - **File validation** — Only JPEG, PNG, and WebP images allowed, 5MB max size
-- **Security** — Password hashing with bcrypt, protected routes, ownership checks
+- **Rate limit handling** — Graceful 429 responses when Gemini AI quota is exceeded
+- **Security** — Password hashing with bcrypt, protected routes, ownership checks, password never exposed in responses
 
 ## Tech Stack
 
@@ -26,6 +28,7 @@ A RESTful API built with **Express 5** and **TypeScript** that automatically gen
 | **Authentication** | JWT (`jsonwebtoken`) + `bcryptjs` |
 | **Validation**     | Zod                               |
 | **File Upload**    | Multer (memory storage)           |
+| **API Docs**       | Swagger UI + swagger-jsdoc        |
 | **Linting**        | ESLint + TypeScript ESLint        |
 
 ## Project Structure
@@ -34,20 +37,21 @@ A RESTful API built with **Express 5** and **TypeScript** that automatically gen
 src/
 ├── config/
 │   ├── config.ts          # Environment variables & app configuration
-│   └── db.ts              # MongoDB connection setup
+│   ├── db.ts              # MongoDB connection setup
+│   └── swagger.ts         # OpenAPI/Swagger specification & schemas
 ├── controllers/
 │   ├── auth.controller.ts # Register, login, logout handlers
-│   ├── post.controller.ts # CRUD operations for posts
-│   └── user.controller.ts # User profile management
+│   ├── post.controller.ts # CRUD operations for posts + AI caption
+│   └── user.controller.ts # User profile management (getMe, updateMe, deleteMe)
 ├── middlewares/
 │   └── protect.middleware.ts # JWT authentication middleware
 ├── models/
 │   ├── post.model.ts      # Post schema (image, caption, user)
 │   └── user.model.ts      # User schema (username, email, password)
 ├── routes/
-│   ├── auth.routes.ts     # /api/auth routes
-│   ├── post.routes.ts     # /api/posts routes (with Multer)
-│   └── user.routes.ts     # /api/users routes
+│   ├── auth.routes.ts     # /api/auth routes (with Swagger docs)
+│   ├── post.routes.ts     # /api/posts routes (with Swagger docs)
+│   └── user.routes.ts     # /api/users routes (with Swagger docs)
 ├── services/
 │   ├── ai.service.ts      # Google Gemini AI caption generation
 │   └── storage.service.ts # ImageKit file upload
@@ -57,7 +61,7 @@ src/
 │   ├── auth.validators.ts # Register & login Zod schemas
 │   ├── post.validators.ts # Create & update post Zod schemas
 │   └── user.validators.ts # Update user Zod schema
-├── app.ts                 # Express app setup & middleware
+├── app.ts                 # Express app setup, middleware & Swagger UI
 └── index.ts               # Server entry point
 ```
 
@@ -66,7 +70,7 @@ src/
 ### Prerequisites
 
 - **Node.js** (v18 or higher)
-- **MongoDB** (local or MongoDB Atlas)
+- **MongoDB** (local or [MongoDB Atlas](https://www.mongodb.com/atlas) for deployment)
 - **Google Gemini API Key** — [Get one here](https://ai.google.dev/)
 - **ImageKit Account** — [Sign up here](https://imagekit.io/)
 
@@ -85,25 +89,19 @@ src/
    npm install
    ```
 
-3. **Create environment file**
-
-   ```bash
-   cp .env.example .env
-   ```
-
-4. **Configure environment variables** — Edit `.env` with your credentials:
+3. **Configure environment variables** — Create a `.env` file in the project root:
 
    ```env
    PORT=5000
    NODE_ENV=development
-   DATABASE_URL=mongodb://localhost:27017/ai-caption-generator
+   DATABASE_URL=mongodb://localhost:27017/caption
    JWT_SECRET=your_jwt_secret_here
    JWT_EXPIRATION=7d
    GEMINI_API_KEY=your_gemini_api_key_here
    IMAGEKIT_PRIVATE_KEY=your_imagekit_private_key_here
    ```
 
-5. **Start the development server**
+4. **Start the development server**
 
    ```bash
    npm run dev
@@ -111,32 +109,49 @@ src/
 
    The server will start at `http://localhost:5000`.
 
+## API Documentation (Swagger)
+
+Interactive API documentation is available via Swagger UI:
+
+| URL                                   | Description                                 |
+| ------------------------------------- | ------------------------------------------- |
+| `http://localhost:5000/api-docs`      | Swagger UI — interactive API explorer       |
+| `http://localhost:5000/api-docs.json` | Raw OpenAPI JSON spec (import into Postman) |
+
+The Swagger UI includes:
+
+- ✅ Try-it-out mode enabled by default
+- ✅ Request duration display
+- ✅ Persistent authorization (token stays after page refresh)
+- ✅ Search/filter bar for endpoints
+- ✅ Multiple request examples per endpoint
+
 ## API Endpoints
 
 ### Auth Routes (`/api/auth`)
 
-| Method | Endpoint             | Auth Required | Description                 |
-| ------ | -------------------- | ------------- | --------------------------- |
-| `POST` | `/api/auth/register` | ❌            | Register a new user         |
-| `POST` | `/api/auth/login`    | ❌            | Login with email & password |
-| `POST` | `/api/auth/logout`   | ✅            | Logout (clears cookie)      |
+| Method | Endpoint             | Auth | Description                 |
+| ------ | -------------------- | ---- | --------------------------- |
+| `POST` | `/api/auth/register` | ❌   | Register a new user         |
+| `POST` | `/api/auth/login`    | ❌   | Login with email & password |
+| `POST` | `/api/auth/logout`   | ✅   | Logout (clears cookie)      |
 
 ### User Routes (`/api/users`)
 
-| Method   | Endpoint      | Auth Required | Description                   |
-| -------- | ------------- | ------------- | ----------------------------- |
-| `GET`    | `/api/users/` | ✅            | Get my profile                |
-| `PUT`    | `/api/users/` | ✅            | Update my profile             |
-| `DELETE` | `/api/users/` | ✅            | Delete my account & all posts |
+| Method   | Endpoint      | Auth | Description                                   |
+| -------- | ------------- | ---- | --------------------------------------------- |
+| `GET`    | `/api/users/` | ✅   | Get my profile                                |
+| `PUT`    | `/api/users/` | ✅   | Update my profile (partial updates supported) |
+| `DELETE` | `/api/users/` | ✅   | Delete my account & all associated posts      |
 
 ### Post Routes (`/api/posts`)
 
-| Method   | Endpoint             | Auth Required | Description                        |
-| -------- | -------------------- | ------------- | ---------------------------------- |
-| `GET`    | `/api/posts/`        | ✅            | Get all my posts                   |
-| `POST`   | `/api/posts/`        | ✅            | Upload image & generate caption    |
-| `PUT`    | `/api/posts/:postId` | ✅            | Update post (image and/or caption) |
-| `DELETE` | `/api/posts/:postId` | ✅            | Delete post                        |
+| Method   | Endpoint             | Auth | Description                             |
+| -------- | -------------------- | ---- | --------------------------------------- |
+| `GET`    | `/api/posts/`        | ✅   | Get all my posts                        |
+| `POST`   | `/api/posts/`        | ✅   | Upload image & generate AI caption      |
+| `PUT`    | `/api/posts/:postId` | ✅   | Update post (new image or edit caption) |
+| `DELETE` | `/api/posts/:postId` | ✅   | Delete post                             |
 
 ## API Usage
 
@@ -236,6 +251,26 @@ The API supports two authentication methods:
 | Storage         | ImageKit (cloud)          |
 | Filename format | UUID + original extension |
 
+## Error Handling
+
+The API returns consistent error responses:
+
+```json
+{
+  "status": "failed",
+  "error": "Description of what went wrong"
+}
+```
+
+| Status Code | Meaning                                 |
+| ----------- | --------------------------------------- |
+| `400`       | Validation error or bad request         |
+| `401`       | Unauthorized — missing or invalid token |
+| `403`       | Forbidden — you don't own this resource |
+| `404`       | Resource not found                      |
+| `429`       | AI rate limit reached — try again later |
+| `500`       | Internal server error                   |
+
 ## Available Scripts
 
 | Script               | Description                              |
@@ -249,15 +284,27 @@ The API supports two authentication methods:
 
 ## Environment Variables
 
-| Variable               | Required | Default       | Description                |
-| ---------------------- | -------- | ------------- | -------------------------- |
-| `PORT`                 | ❌       | `5000`        | Server port                |
-| `NODE_ENV`             | ❌       | `development` | Environment mode           |
-| `DATABASE_URL`         | ✅       | —             | MongoDB connection string  |
-| `JWT_SECRET`           | ✅       | —             | Secret key for JWT signing |
-| `JWT_EXPIRATION`       | ❌       | `7d`          | JWT token expiration       |
-| `GEMINI_API_KEY`       | ✅       | —             | Google Gemini API key      |
-| `IMAGEKIT_PRIVATE_KEY` | ✅       | —             | ImageKit private key       |
+| Variable               | Required | Default       | Description                                     |
+| ---------------------- | -------- | ------------- | ----------------------------------------------- |
+| `PORT`                 | ❌       | `5000`        | Server port                                     |
+| `NODE_ENV`             | ❌       | `development` | Environment mode (`development` / `production`) |
+| `DATABASE_URL`         | ✅       | —             | MongoDB connection string                       |
+| `JWT_SECRET`           | ✅       | —             | Secret key for JWT signing                      |
+| `JWT_EXPIRATION`       | ❌       | `7d`          | JWT token expiration                            |
+| `GEMINI_API_KEY`       | ✅       | —             | Google Gemini API key                           |
+| `IMAGEKIT_PRIVATE_KEY` | ✅       | —             | ImageKit private key                            |
+
+### Deployment Note
+
+For deploying to platforms like **Render** or **Railway**, use a cloud-hosted MongoDB:
+
+```env
+# Local
+DATABASE_URL=mongodb://localhost:27017/caption
+
+# Production (MongoDB Atlas)
+DATABASE_URL=mongodb+srv://user:pass@cluster0.abc123.mongodb.net/caption?retryWrites=true&w=majority
+```
 
 ## License
 
