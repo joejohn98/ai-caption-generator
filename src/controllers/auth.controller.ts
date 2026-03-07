@@ -43,7 +43,6 @@ const registerUser = async (req: Request, res: Response): Promise<void> => {
     res.status(201).json({
       status: "success",
       data: userData,
-      token,
     });
   } catch (error) {
     console.log("error to register the user", error);
@@ -100,7 +99,6 @@ const loginUser = async (req: Request, res: Response): Promise<void> => {
       status: "success",
       message: "User logged in successfully",
       data: userResponse,
-      token,
     });
   } catch (error) {
     console.log("error to login the user", error);
