@@ -72,7 +72,7 @@ const createPost = async (req: Request, res: Response): Promise<void> => {
     const fileName = `${uuidv4()}${path.extname(file.originalname)}`;
 
     const [caption, uploadResult] = await Promise.all([
-      generateCaption(base64Image),
+      generateCaption(base64Image, file.mimetype),
       uploadImage(file, fileName),
     ]);
 
@@ -157,7 +157,7 @@ const updatePost = async (req: Request, res: Response): Promise<void> => {
       const fileName = `${uuidv4()}${path.extname(file.originalname)}`;
 
       const [caption, uploadResult] = await Promise.all([
-        generateCaption(base64Image),
+        generateCaption(base64Image, file.mimetype),
         uploadImage(file, fileName),
       ]);
 

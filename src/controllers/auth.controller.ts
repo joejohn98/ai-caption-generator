@@ -19,17 +19,17 @@ const registerUser = async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
-  const existingUser = await User.findOne({ email });
-
-  if (existingUser) {
-    res.status(400).json({
-      status: "failed",
-      error: "User with this email already exists",
-    });
-    return;
-  }
-
   try {
+    const existingUser = await User.findOne({ email });
+
+    if (existingUser) {
+      res.status(400).json({
+        status: "failed",
+        error: "User with this email already exists",
+      });
+      return;
+    }
+
     const newUser = new User({ username, email, password });
 
     // Generate and set JWT token before saving to database
@@ -37,9 +37,12 @@ const registerUser = async (req: Request, res: Response): Promise<void> => {
 
     await newUser.save();
 
+    // Remove password from the response
+    const { password: _, ...userData } = newUser.toObject();
+
     res.status(201).json({
       status: "success",
-      data: newUser,
+      data: userData,
       token,
     });
   } catch (error) {
@@ -64,17 +67,17 @@ const loginUser = async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
-  const existingUser = await User.findOne({ email }).select("+password");
-
-  if (!existingUser) {
-    res.status(400).json({
-      status: "failed",
-      error: "User with this email does not exist",
-    });
-    return;
-  }
-
   try {
+    const existingUser = await User.findOne({ email }).select("+password");
+
+    if (!existingUser) {
+      res.status(400).json({
+        status: "failed",
+        error: "User with this email does not exist",
+      });
+      return;
+    }
+
     const isPasswordValid = await bcrypt.compare(
       password,
       existingUser.password,
