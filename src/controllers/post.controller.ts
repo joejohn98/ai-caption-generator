@@ -16,7 +16,7 @@ const isValidObjectId = (id: string): boolean => {
 };
 
 const getPosts = async (req: Request, res: Response): Promise<void> => {
-  const userId = req.user._id;
+  const userId = req.user._id.toString();
 
   if (!isValidObjectId(userId)) {
     res.status(400).json({
@@ -45,7 +45,7 @@ const getPosts = async (req: Request, res: Response): Promise<void> => {
 };
 
 const createPost = async (req: Request, res: Response): Promise<void> => {
-  const userId = req.user._id;
+  const userId = req.user._id.toString();
   const file = req.file;
 
   if (!isValidObjectId(userId)) {
@@ -203,7 +203,7 @@ const updatePost = async (req: Request, res: Response): Promise<void> => {
 };
 
 const deletePost = async (req: Request, res: Response): Promise<void> => {
-  const userId = req.user._id;
+  const userId = req.user._id.toString();
   const { postId } = req.params as { postId: string };
 
   if (!isValidObjectId(userId)) {
