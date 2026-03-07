@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import User from "../models/user.model";
+import Post from "../models/post.model";
 import { updateUserSchema } from "../validators/user.validators";
 
 const isValidObjectId = (id: string): boolean => {
@@ -71,6 +72,18 @@ const updateMe = async (req: Request, res: Response): Promise<void> => {
   }
 
   try {
+    // Check if the new email already belongs to another user
+    if (updateData.email) {
+      const existingUser = await User.findOne({ email: updateData.email });
+      if (existingUser && existingUser._id.toString() !== userId.toString()) {
+        res.status(400).json({
+          status: "failed",
+          error: "Email already in use",
+        });
+        return;
+      }
+    }
+
     if (updateData.password) {
       updateData.password = await bcrypt.hash(updateData.password, 10);
     }
@@ -115,9 +128,16 @@ const deleteMe = async (req: Request, res: Response): Promise<void> => {
       });
       return;
     }
+
+    // Delete all posts belonging to this user
+    await Post.deleteMany({ user: userId });
+
+    // Clear the auth cookie
+    res.clearCookie("token");
+
     res.status(200).json({
       status: "success",
-      message: "User deleted successfully",
+      message: "User and associated posts deleted successfully",
     });
   } catch (error) {
     console.log("error deleting user", error);
