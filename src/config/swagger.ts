@@ -32,7 +32,7 @@ This API supports two authentication methods:
         description: "Development server",
       },
       {
-        url: "https://your-deployed-url.railway.app", // 🔁 Replace with your deployed URL
+        url: "https://ai-caption-generator-api.onrender.com",
         description: "Production server",
       },
     ],
@@ -42,13 +42,15 @@ This API supports two authentication methods:
           type: "http",
           scheme: "bearer",
           bearerFormat: "JWT",
-          description: "Enter your JWT token obtained from /api/auth/login or /api/auth/register",
+          description:
+            "Enter your JWT token obtained from /api/auth/login or /api/auth/register",
         },
         cookieAuth: {
           type: "apiKey",
           in: "cookie",
           name: "token",
-          description: "JWT token automatically set as httpOnly cookie on login/register",
+          description:
+            "JWT token automatically set as httpOnly cookie on login/register",
         },
       },
       schemas: {
@@ -177,7 +179,8 @@ This API supports two authentication methods:
 
         UpdateUserRequest: {
           type: "object",
-          description: "All fields are optional — provide only what you want to update",
+          description:
+            "All fields are optional — provide only what you want to update",
           properties: {
             username: {
               type: "string",
@@ -209,7 +212,8 @@ This API supports two authentication methods:
             token: {
               type: "string",
               example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-              description: "JWT token — also set as httpOnly cookie automatically",
+              description:
+                "JWT token — also set as httpOnly cookie automatically",
             },
           },
         },
@@ -226,7 +230,10 @@ This API supports two authentication methods:
           type: "object",
           properties: {
             status: { type: "string", example: "success" },
-            message: { type: "string", example: "Operation completed successfully" },
+            message: {
+              type: "string",
+              example: "Operation completed successfully",
+            },
           },
         },
       },
